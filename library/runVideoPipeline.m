@@ -12,6 +12,8 @@ function runVideoPipeline( pathParams, varargin )
 %       makeControlFile
 %       applyControlFile
 %       fitPupilPerimeter -- with minimal constraints
+%       makeTimebase
+%       for scene geometry
 %       syncSceneGeometry
 %       fitPupilPerimeter -- fit again with scene geometry constraints
 %       smoothPupilRadius
@@ -106,7 +108,6 @@ function runVideoPipeline( pathParams, varargin )
 %   None. The routine saves files but does not return variables.
 %
 
-
 %% Parse input and define variables
 p = inputParser; p.KeepUnmatched = true;
 
@@ -172,6 +173,19 @@ end
 
     
 % LiveTrack gaze calibration data files and diagnostic plots
+rawVideoName = fullfile(pathParams.dataSourceDirFull, [pathParams.runName '_Calibration.mov']);
+if exist(rawVideoName)== 0
+    rawVideoName = fullfile(pathParams.dataSourceDirFull, [pathParams.runName '.mov']);
+else
+    rawVideoName = fullfile(pathParams.dataSourceDirFull, [pathParams.runName '_Calibration.mov']);
+    if exist(rawVideoName)== 0
+        try
+            rawVideoName = fullfile(pathParams.dataSourceDirFull, [pathParams.runName '_raw.mov'])
+        catch
+            disp('Error in loading:' rawVideoName '. Check filename.') 
+        end
+    end
+end
 LTdatFileName = fullfile(pathParams.dataSourceDirFull, [pathParams.runName '_LTdat.mat']);
 LTReportFileName = fullfile(pathParams.dataSourceDirFull, [pathParams.runName '_report.mat']);
 rawVidStartFileName = fullfile(pathParams.dataSourceDirFull, [pathParams.runName '_rawVidStart.mat']);
@@ -211,6 +225,8 @@ else
     videoStemNameIn = fullfile(pathParams.dataOutputDirFull,pathParams.runName );
 end
 videoStemNameOut = fullfile(pathParams.dataOutputDirFull,pathParams.runName );
+frameSet = [];
+gazeTargets = [];
 
 % Names for the final videos
 finalFitVideoName = fullfile(pathParams.dataOutputDirFull, [pathParams.runName '_finalFit.avi']);
@@ -244,6 +260,7 @@ switch p.Results.videoTypeChoice
             'makeControlFile(controlFileName, perimeterFileName, glintFileName, varargin{:});' ...
             'applyControlFile(perimeterFileName,controlFileName,correctedPerimeterFileName, varargin{:});' ...
             'fitPupilPerimeter(correctedPerimeterFileName, pupilFileName, varargin{:});' ...
+            'makeTimebase(rawVideoName, timebaseFileName, varargin{:});'...
             'syncSceneGeometry(videoStemNameIn, videoStemNameOut, varargin{:});'...
             ['fitPupilPerimeter(correctedPerimeterFileName, pupilFileName,' ...
             '''sceneGeometryFileName'', sceneGeometryFileName, ''glintFileName'', glintFileName, ''relativeCameraPositionFileName'', relativeCameraPositionFileName, varargin{:});']...
@@ -290,7 +307,8 @@ end
 
 % Loop through the function calls
 for ff = 1:length(funCalls)
-    
+    %% May bypass fshift and gif 
+    addpath(genpath('/home/ssrira0/Documents/MATLAB/toolboxes/matlabcentral/'));
     % Check if we are instructed to skip this stage, either by stage name
     % or by functional call number.
     if ~any(strcmp(p.Results.skipStageByName,funNames{ff})) && ~any(p.Results.skipStageByNumber == ff)
@@ -476,6 +494,4 @@ makeFitVideo(grayVideoName, fitVideoFileName, ...
 
         
 end % makeFitVideoForThisStage
-
-
-
+end
